@@ -54,6 +54,15 @@ function contrast(a, b) {
   return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
 }
 
+// Degrees between two hues, 0 to 180
+const hueGap = (a, b) => Math.abs(((a - b + 540) % 360) - 180);
+
+// sRGB blend, the same result as CSS color-mix(in srgb, a t, b)
+function mixHex(a, b, t) {
+  const pa = parseInt(a.slice(1), 16), pb = parseInt(b.slice(1), 16);
+  return '#' + [16, 8, 0].map(s => Math.round((pa >> s & 255) * t + (pb >> s & 255) * (1 - t)).toString(16).padStart(2, '0')).join('');
+}
+
 // Walk lightness away from a starting point until test(hex) passes.
 // dir: -1 darker, +1 lighter, 0 whichever is nearer.
 function scan(L, C, H, test, dir, lo = 0.03, hi = 0.995) {
@@ -156,13 +165,29 @@ function generate(seed, opts) {
   const sTC = sbDark
     ? { neutral: 0.012, tinted: 0.055, colored: sVivid }[text]
     : { neutral: 0.03, tinted: 0.06, colored: sVivid }[text];
-  // unread, open-channel and header text: a brighter step of the same color
-  const sStrong = sbDark
-    ? { neutral: '#ffffff', tinted: toHex(0.97, 0.025, sTH), colored: toHex(0.94, 0.06, sTH) }[text]
-    : toHex({ neutral: 0.17, tinted: 0.2, colored: 0.28 }[text], { neutral: 0.03, tinted: 0.05, colored: 0.1 }[text], sTH);
   const sNeed = sbDark ? { neutral: 6, tinted: 5.5, colored: 5.5 }[text] : { neutral: 8, tinted: 8, colored: 6.5 }[text];
   const sStart = sbDark ? { neutral: 0.97, tinted: 0.9, colored: 0.84 }[text] : { neutral: 0.32, tinted: 0.36, colored: 0.46 }[text];
   const sText = fit(sStart, sTC, sTH, h => contrast(h, sBg) >= sNeed && contrast(h, sHover) >= 4.6, sbDark ? 1 : -1);
+
+  // Unread, open-channel and header text each pick their own hue from the harmony, so "bold" rows
+  // can differ sharply from normal ones. Each is fitted against every surface it is drawn on.
+  const altHue = (avoid, u) => {
+    const c = [HS, HA, H0].filter(h => hueGap(h, avoid) >= 25);
+    return c.length ? c[Math.floor(u * c.length)] : avoid;
+  };
+  const sUH = altHue(sTH, r2());
+  const sAH = r2() < 0.5 ? sUH : HA;
+  const sHH = r2() < 0.5 ? sTH : sUH;
+  const strong = (H, main, others) => {
+    if (text === 'neutral') return sbDark ? '#ffffff' : toHex(0.17, 0.03, H0);
+    const C = text === 'colored' ? sVivid : (sbDark ? 0.04 : 0.055);
+    const L0 = sbDark ? (text === 'colored' ? 0.88 : 0.95) : (text === 'colored' ? 0.38 : 0.24);
+    const need = sbDark ? 6 : 7;
+    return fit(L0, C, H, h => contrast(h, main) >= need && others.every(s => contrast(h, s) >= 4.6), sbDark ? 1 : -1);
+  };
+  const sUnread = strong(sUH, sBg, [sHover]);
+  const sActive = strong(sAH, sBg, [mixHex(sText, sBg, 0.16)]);
+  const sHeadText = strong(sHH, sHead, [sTeam]);
   const sBorder = fit(sbDark ? 0.76 : 0.52, 0.16 * v, HA, h => contrast(h, sBg) >= 3, sbDark ? 1 : -1);
 
   // ---- mention badge in the sidebar
@@ -200,9 +225,9 @@ function generate(seed, opts) {
   const dndL = statusL(25, 0.19, 0.6, sBg, cBg);
 
   const theme = {
-    sidebarBg: sBg, sidebarText: sText, sidebarUnreadText: sStrong, sidebarTextHoverBg: sHover,
-    sidebarTextActiveBorder: sBorder, sidebarTextActiveColor: sStrong,
-    sidebarHeaderBg: sHead, sidebarHeaderTextColor: sStrong, sidebarTeamBarBg: sTeam,
+    sidebarBg: sBg, sidebarText: sText, sidebarUnreadText: sUnread, sidebarTextHoverBg: sHover,
+    sidebarTextActiveBorder: sBorder, sidebarTextActiveColor: sActive,
+    sidebarHeaderBg: sHead, sidebarHeaderTextColor: sHeadText, sidebarTeamBarBg: sTeam,
     onlineIndicator: toHex(onL, 0.17, 150), awayIndicator: toHex(awayL, 0.16, awayH), dndIndicator: toHex(dndL, 0.19, 25),
     mentionBg: mBg, mentionBj: mBg, mentionColor: mFg,
     centerChannelBg: cBg, centerChannelColor: cFg, newMessageSeparator: sep,
