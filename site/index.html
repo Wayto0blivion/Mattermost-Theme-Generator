@@ -37,6 +37,20 @@
         <div class="hue"><label><input type="checkbox" id="hue-pin"> Pin</label><input type="range" id="hue" min="0" max="359" value="255" aria-label="Base hue" disabled></div></div>
     </div>
   </section>
+  <section class="yours" aria-label="Start from your own colors">
+    <div class="opt grow">
+      <label class="cap" for="pal">Your colors (optional)</label>
+      <input type="text" id="pal" spellcheck="false" autocomplete="off" placeholder="Paste hex colors or a Coolors link. One color works as a seed.">
+    </div>
+    <div class="opt">
+      <span class="cap">Add</span>
+      <input type="color" id="pal-pick" value="#2ec4b6" aria-label="Pick a color to add">
+    </div>
+    <div class="chips" id="pal-chips"></div>
+    <label class="check"><input type="checkbox" id="pal-exact" checked> Keep my colors exact</label>
+    <button class="btn small" id="pal-clear" type="button" hidden>Clear</button>
+    <p class="note" id="pal-note" hidden>Each color goes, unchanged, into a slot where it works. Generate re-deals them. Base hue is ignored, and Harmony only fills in hues you did not supply. With exact colors off, colors are shifted lighter or darker until every check passes.</p>
+  </section>
   <p id="meta" role="status"></p>
 
   <div class="main">
@@ -93,7 +107,7 @@
                     <span class="mm-err">Message failed to send. Retry</span></div>
                 </div>
               </div>
-              <div class="mm-compose"><span>Write to deploys</span><span class="mm-btn">Send</span></div>
+              <div class="mm-compose"><span class="mm-hint">Write to deploys</span><span class="mm-btn">Send</span></div>
             </div>
           </div>
         </div>
@@ -111,6 +125,7 @@
         <textarea id="json" spellcheck="false" aria-label="Theme JSON"></textarea>
         <div class="actions">
           <button class="btn small" id="copy" type="button">Copy theme</button>
+          <button class="btn small" id="link" type="button">Copy link</button>
           <button class="btn small" id="load" type="button">Load pasted theme</button>
           <button class="btn small" id="sample" type="button">Load the teal and orange original</button>
         </div>

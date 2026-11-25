@@ -37,6 +37,14 @@ const COLOR_KEYS = GROUPS.flatMap(g => g[1].map(s => s[0]));
 const ORIGINAL = {"awayIndicator":"#e9ff00","buttonBg":"#ff9f1c","buttonColor":"#ffffff","centerChannelBg":"#2ec4b6","centerChannelColor":"#cbf3f0","codeTheme":"#000000","dndIndicator":"#000000","errorTextColor":"#cbf3f0","linkColor":"#000000","mentionBg":"#2ec4b6","mentionBj":"#ffffff","mentionColor":"#ff9f1c","mentionHighlightBg":"#2ec4b6","mentionHighlightLink":"#ff9f1c","newMessageSeparator":"#ffbf69","onlineIndicator":"#00ff37","sidebarBg":"#ffffff","sidebarHeaderBg":"#ff9f1c","sidebarHeaderTextColor":"#ffffff","sidebarTeamBarBg":"#2ec4b6","sidebarText":"#2ec4b6","sidebarTextActiveBorder":"#cbf3f0","sidebarTextActiveColor":"#ffbf69","sidebarTextHoverBg":"#ff9f1c","sidebarUnreadText":"#ff9f1c"};
 const LOCK_SVG = '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><rect x="3" y="7" width="10" height="7" rx="1.5" fill="currentColor"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>';
 const KEPT_KEY = 'mm-theme-generator-kept';
+const PAL_KEY = 'mm-theme-generator-palette';
+// Share links store colors in this order. Never reorder or remove entries, or old links will break.
+const SHARE_KEYS = ['sidebarBg', 'sidebarText', 'sidebarUnreadText', 'sidebarTextHoverBg', 'sidebarTextActiveBorder',
+  'sidebarTextActiveColor', 'sidebarHeaderBg', 'sidebarHeaderTextColor', 'sidebarTeamBarBg', 'centerChannelBg',
+  'centerChannelColor', 'linkColor', 'buttonBg', 'buttonColor', 'errorTextColor', 'newMessageSeparator', 'mentionBg',
+  'mentionColor', 'mentionHighlightBg', 'mentionHighlightLink', 'onlineIndicator', 'awayIndicator', 'dndIndicator'];
+// Inside a Claude artifact the page is framed and cannot see or set the real address bar.
+const framed = (() => { try { return window.top !== window.self; } catch (_) { return true; } })();
 
 let cur = null;          // { theme, meta }
 let recent = [];         // newest last
@@ -83,18 +91,54 @@ function readOpts() {
     center: $('opt-center').value, sidebar: $('opt-sidebar').value,
     harmony: $('opt-harmony').value, viv: $('opt-viv').value, text: $('opt-text').value,
     hue: $('hue-pin').checked ? Number($('hue').value) : null,
+    palette: parsePalette($('pal').value), exact: $('pal-exact').checked,
   };
 }
 
+// Pull every hex color out of free text: "#1e325c, ffbc1f", a Coolors link, and so on.
+function parsePalette(text) {
+  const out = [];
+  for (const m of String(text).matchAll(/#([0-9a-f]{3})\b|#?\b([0-9a-f]{6})\b/gi)) {
+    const h = hex6('#' + (m[1] || m[2]));
+    if (h && !out.includes(h)) out.push(h);
+  }
+  return out.slice(0, 8);
+}
+
+// A share link is "t1-" + 23 colors as hex + one digit for the code theme.
+function encodeTheme(t) {
+  return 't1-' + SHARE_KEYS.map(k => t[k].slice(1)).join('') + Math.max(0, CODE_THEMES.indexOf(t.codeTheme));
+}
+function decodeTheme(hash) {
+  const m = new RegExp(`^#?t1-([0-9a-f]{${SHARE_KEYS.length * 6}})([0-3])$`, 'i').exec(hash || '');
+  if (!m) return null;
+  const t = {};
+  SHARE_KEYS.forEach((k, i) => { t[k] = '#' + m[1].slice(i * 6, i * 6 + 6).toLowerCase(); });
+  t.mentionBj = t.mentionBg;
+  t.codeTheme = CODE_THEMES[Number(m[2])];
+  return t;
+}
+// Keep the address bar pointing at the theme on screen, so a reload or a copied address brings it back.
+let hashTimer;
+function syncHash() {
+  if (framed) return;
+  clearTimeout(hashTimer);
+  hashTimer = setTimeout(() => {
+    try { history.replaceState(null, '', '#' + encodeTheme(cur.theme)); } catch (_) { /* address stays as it was */ }
+  }, 250);
+}
+
 function roll(seed) {
-  const g = generate(seed == null ? (Math.random() * 4294967296) >>> 0 : seed, readOpts());
+  const opts = readOpts();
+  const g = generate(seed == null ? (Math.random() * 4294967296) >>> 0 : seed, opts);
+  g.palette = opts.palette;
   let meta = g.meta;
   if (cur && locks.size) {
     for (const k of locks) g.theme[k] = cur.theme[k];
     g.theme.mentionBj = g.theme.mentionBg;
     meta += `, ${locks.size} locked`;
   }
-  push({ theme: g.theme, meta });
+  push({ theme: g.theme, meta, palette: g.palette });
 }
 
 function push(entry) {
@@ -159,7 +203,9 @@ function render() {
     mock.style.setProperty('--' + k, t[k]);
     $('c-' + k).value = t[k];
     $('h-' + k).textContent = t[k];
+    $('s-' + k).classList.toggle('given', (cur.palette || []).includes(t[k]));
   }
+  syncHash();
   mock.dataset.code = t.codeTheme;
   $('codeTheme').value = t.codeTheme;
   $('json').value = themeJSON(t);
@@ -175,7 +221,7 @@ function edit(key, value) {
   const theme = { ...cur.theme, [key]: value };
   theme.mentionBj = theme.mentionBg;
   const meta = cur.meta.endsWith('(edited)') ? cur.meta : cur.meta + ' (edited)';
-  cur = { theme, meta };
+  cur = { theme, meta, palette: cur.palette };
   recent[rIdx] = cur;
   render();
 }
@@ -208,6 +254,7 @@ function buildEditor() {
     for (const [key, desc] of slots) {
       const row = document.createElement('div');
       row.className = 'slot';
+      row.id = 's-' + key;
       row.innerHTML = `<input type="color" id="c-${key}" aria-label="${key}">` +
         `<div><div class="k">${key}</div><div class="d">${desc}</div></div>` +
         `<span class="hex" id="h-${key}"></span>` +
@@ -262,6 +309,24 @@ $('copy').addEventListener('click', () => {
     navigator.clipboard.writeText(ta.value).then(() => say('Copied. Paste it into the Custom Theme box in Mattermost.', false), fallback);
   } catch (_) { fallback(); }
 });
+$('link').addEventListener('click', () => {
+  const code = encodeTheme(cur.theme);
+  if (framed) {
+    try { location.hash = code; } catch (_) { /* nothing else to try */ }
+    say('This theme is now part of the page address. Copy the address from your browser, or use Share.', false);
+    return;
+  }
+  try { history.replaceState(null, '', '#' + code); } catch (_) { /* the copied link still works */ }
+  const url = location.href.split('#')[0] + '#' + code;
+  const fallback = () => say('Copying was blocked here. The link is in the address bar, so copy it from there.', false);
+  try {
+    navigator.clipboard.writeText(url).then(() => say('Link copied. Anyone who opens it sees this exact theme.', false), fallback);
+  } catch (_) { fallback(); }
+});
+window.addEventListener('hashchange', () => {
+  const t = decodeTheme(location.hash);
+  if (t && themeJSON(t) !== themeJSON(cur.theme)) push({ theme: t, meta: 'Shared theme' });
+});
 $('load').addEventListener('click', () => {
   let obj;
   try { obj = JSON.parse($('json').value); } catch (_) { obj = null; }
@@ -289,8 +354,60 @@ document.addEventListener('keydown', e => {
   else if (e.key === 'ArrowRight' && rIdx < recent.length - 1) { rIdx++; cur = recent[rIdx]; render(); }
 });
 
-// Open on a fixed first roll so the page is never empty, plus two more to show the range.
-roll(2072);
-roll(1313);
-roll(1357);
-rIdx = 0; cur = recent[0]; render();
+// ---------- your own colors ----------
+let rolledPalette = '';
+function savePalette() {
+  try { localStorage.setItem(PAL_KEY, JSON.stringify({ text: $('pal').value, exact: $('pal-exact').checked })); } catch (_) { /* not remembered */ }
+}
+function renderChips() {
+  const colors = parsePalette($('pal').value);
+  $('pal-clear').hidden = $('pal-note').hidden = !colors.length;
+  $('pal-chips').replaceChildren(...colors.map(hex => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'chip-btn'; b.style.background = hex;
+    b.title = `${hex} (click to remove)`;
+    b.setAttribute('aria-label', `Remove ${hex}`);
+    b.addEventListener('click', () => setPalette(colors.filter(c => c !== hex)));
+    return b;
+  }));
+}
+function setPalette(colors) {
+  $('pal').value = colors.join(', ');
+  commitPalette();
+}
+// Roll once per change to the color list, however the change was made.
+function commitPalette() {
+  renderChips();
+  savePalette();
+  const key = parsePalette($('pal').value).join() + $('pal-exact').checked;
+  if (key === rolledPalette) return;
+  rolledPalette = key;
+  say('');
+  roll();
+}
+$('pal').addEventListener('input', renderChips);
+$('pal').addEventListener('change', commitPalette);
+$('pal').addEventListener('keydown', e => { if (e.key === 'Enter') commitPalette(); });
+$('pal-pick').addEventListener('change', e => setPalette([...parsePalette($('pal').value), e.target.value]));
+$('pal-exact').addEventListener('change', () => {
+  if (parsePalette($('pal').value).length) commitPalette(); else savePalette();
+});
+$('pal-clear').addEventListener('click', () => setPalette([]));
+try {
+  const saved = JSON.parse(localStorage.getItem(PAL_KEY) || 'null');
+  if (saved && typeof saved.text === 'string') { $('pal').value = saved.text; $('pal-exact').checked = saved.exact !== false; }
+} catch (_) { /* start empty */ }
+renderChips();
+rolledPalette = parsePalette($('pal').value).join() + $('pal-exact').checked;
+
+// ---------- first view ----------
+// A share link opens on its theme. Otherwise open on three fixed rolls so the page is never empty.
+const shared = decodeTheme(location.hash);
+if (shared) {
+  push({ theme: shared, meta: 'Shared theme' });
+} else {
+  roll(2072);
+  roll(1313);
+  roll(1357);
+  rIdx = 0; cur = recent[0]; render();
+}

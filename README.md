@@ -10,7 +10,9 @@ A palette of colors that look good together is not enough for a usable theme: ea
 
 - **Generate** (or Space) rolls a new theme. Left and right arrows step through recent rolls.
 - **Options** narrow the roll: light or dark channel, sidebar style, harmony, intensity, how much color the text carries, and an optional pinned base hue.
+- **Your colors** builds the theme from colors you supply: paste hex codes or a Coolors link. One color works as a seed, several work as a palette. See "Starting from your own colors" below.
 - **Colors by key** lets you change any single color. Lock a key to carry its color into the next roll.
+- **Copy link** copies an address that reopens the exact theme on screen. The address bar also follows the current theme, so a reload or a bookmark brings it back.
 - **Theme JSON** is the block Mattermost takes. Copy it, then in Mattermost go to Settings, Display, Theme, Custom Theme and paste it into the box under the color pickers. You can also paste an existing theme in and load it to see how it scores.
 - **Keep this one** saves a theme in the browser's local storage. Kept themes do not sync between browsers.
 
@@ -40,7 +42,27 @@ Fonts load from Google Fonts. Without network access the page falls back to syst
 2. Place each color at a starting lightness for its role, then walk lightness until it clears its contrast target against the surface it sits on.
 3. Status dots and error text keep their usual green, amber and red. Only their lightness moves.
 
+4. Unread, open-channel and header text in the sidebar are chosen to look clearly different from normal sidebar text. Each candidate hue is fitted for contrast, then scored by its distance from the normal text color and from plain white or black. If the harmony's own hues all come out washed out, the search widens to the rest of the color wheel. Single-hue themes can only vary lightness.
+
 Every roll is seeded, so the same seed and options always give the same theme.
+
+### Starting from your own colors
+
+With colors in the **Your colors** field, each one is placed unchanged in a slot where it works:
+
+- A near-white or near-black color becomes the channel background.
+- A color dark enough for light text, or pale enough for dark text, becomes the sidebar.
+- The remaining colored inputs split into two roles: action (buttons, links, active marker) and attention (mention highlight, New Messages line, unread badge). Colors that can carry a button on the channel go to the action role first.
+- Colors left without a job become the top bar and sidebar header.
+- Text is never taken on trust. A palette color is used as text only where it is legible; otherwise the text takes a palette hue with its lightness fitted.
+
+With fewer than two accent colors, the Harmony option supplies the hue for the empty role. Generate re-deals the colors, so one palette gives many arrangements.
+
+**Keep my colors exact** (on by default) never alters your colors. A slot that none of them suits is derived from the same hue instead, except each role's main slot (button, mention highlight), which keeps your color so it still shows. Text always stays legible, but shape checks such as "Button against channel" can come out low. Turn it off and colors are shifted lighter or darker until every check passes.
+
+### Share links
+
+A link is the page address plus `#t1-`, the 23 colors as hex in a fixed order, and one digit for the code theme. Nothing is stored on a server. `SHARE_KEYS` in `site/app.js` defines the order and must never be reordered, or old links stop working. Links carry the colors themselves, not the seed, so they survive changes to the generator and work for hand-edited themes.
 
 ### Mattermost details worth knowing
 
@@ -51,7 +73,10 @@ Every roll is seeded, so the same seed and options always give the same theme.
 
 ## Checking changes
 
-`tools/check.js` rolls about 14,000 themes across every option combination and exits non-zero if any theme has a low contrast pair or a malformed value. It only reads files.
+`tools/check.js` rolls about 14,000 random themes across every option combination, plus 12,000 themes built from arbitrary palettes, and exits non-zero if a rule is broken. It only reads files.
+
+- Random themes and nudged palettes: every contrast check must pass.
+- Exact palettes: every text check must pass.
 
 ```sh
 docker run --rm --network none -v "$PWD":/w:ro node:22-alpine node /w/tools/check.js
