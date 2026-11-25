@@ -89,3 +89,7 @@ The page also runs as a Claude artifact. Artifacts want a single file without it
 ```sh
 docker run --rm --network none --user "$(id -u):$(id -g)" -v "$PWD":/w node:22-alpine node /w/tools/build-artifact.js
 ```
+
+## Licence
+
+Mattermost Theme Generator is released under the MIT licence; see `LICENSE`.
