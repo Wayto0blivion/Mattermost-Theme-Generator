@@ -2,6 +2,8 @@
 
 A static web page that rolls random Mattermost themes, shows each one in a mock Mattermost window, and checks the contrast of every text and background pair.
 
+**Live page: https://wayto0blivion.github.io/Mattermost-Theme-Generator/**
+
 A palette of colors that look good together is not enough for a usable theme: each color has a job, and message text, badges and buttons have to stay readable on the surface they sit on. So the generator picks a hue harmony first, then assigns colors by role and shifts lightness until each pair clears its contrast target.
 
 ## Using it
@@ -25,6 +27,8 @@ The page is three static files in `site/` with no build step. Plain scripts, no 
   ```
 
 - Put `site/` behind any static host.
+
+The live page is GitHub Pages. `.github/workflows/pages.yml` runs the contrast check and redeploys `site/` on every push to `main` that touches it.
 
 Fonts load from Google Fonts. Without network access the page falls back to system fonts and still works.
 
