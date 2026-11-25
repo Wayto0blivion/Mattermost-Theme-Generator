@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mattermost Theme Generator</title>
+<meta name="description" content="Roll harmonious Mattermost themes, preview them in a mock Mattermost window, and check contrast for every text and background pair.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23233258'/%3E%3Crect x='11' y='4' width='17' height='24' rx='3' fill='%23fafcff'/%3E%3Crect x='14' y='20' width='8' height='4' rx='2' fill='%234769c2'/%3E%3Crect x='14' y='9' width='11' height='3' rx='1.5' fill='%23f8dfa7'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Open+Sans:wght@400;600;700&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<!-- app:start -->
+<div class="wrap">
+  <header>
+    <h1>Mattermost Theme Generator</h1>
+    <p class="lede">Each roll picks a hue harmony, then fits all 25 theme keys so text, badges and buttons stay readable on the surface they sit on.</p>
+  </header>
+
+  <section class="bar" aria-label="Generator controls">
+    <button class="btn primary" id="gen" type="button">Generate<kbd>Space</kbd></button>
+    <button class="btn" id="keep" type="button">Keep this one</button>
+    <div class="opts">
+      <div class="opt"><label class="cap" for="opt-center">Channel</label>
+        <select id="opt-center"><option value="any">Light or dark</option><option value="light">Light</option><option value="dark">Dark</option></select></div>
+      <div class="opt"><label class="cap" for="opt-sidebar">Sidebar</label>
+        <select id="opt-sidebar"><option value="any">Any</option><option value="dark">Deep</option><option value="color">Colored</option><option value="light">Pale</option></select></div>
+      <div class="opt"><label class="cap" for="opt-harmony">Harmony</label>
+        <select id="opt-harmony"><option value="any">Any</option><option value="mono">Single hue</option><option value="analogous">Analogous</option><option value="complementary">Complementary</option><option value="split">Split complementary</option><option value="triadic">Triadic</option></select></div>
+      <div class="opt"><label class="cap" for="opt-viv">Intensity</label>
+        <select id="opt-viv"><option value="any">Any</option><option value="muted">Muted</option><option value="balanced">Balanced</option><option value="vivid">Vivid</option></select></div>
+      <div class="opt"><label class="cap" for="opt-text">Text</label>
+        <select id="opt-text"><option value="any">Any</option><option value="neutral">Neutral</option><option value="tinted">Tinted</option><option value="colored">Colored</option></select></div>
+      <div class="opt"><span class="cap">Base hue</span>
+        <div class="hue"><label><input type="checkbox" id="hue-pin"> Pin</label><input type="range" id="hue" min="0" max="359" value="255" aria-label="Base hue" disabled></div></div>
+    </div>
+  </section>
+  <p id="meta" role="status"></p>
+
+  <div class="main">
+    <div class="col">
+      <div class="mock-scroll">
+        <div class="mm" id="mock" aria-label="Preview of the theme in a Mattermost window">
+          <div class="mm-top">
+            <span class="mm-grid" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+            <span>Channels</span>
+            <span class="mm-search">Search</span>
+            <span class="mm-me"><span class="mm-dot online" style="position:absolute;right:-2px;bottom:-2px;border:2px solid var(--sidebarTeamBarBg);width:12px;height:12px"></span></span>
+          </div>
+          <div class="mm-body">
+            <div class="mm-teams"><span class="mm-team on">IT</span><span class="mm-team">OP</span><span class="mm-team">HR</span></div>
+            <div class="mm-side">
+              <div class="mm-side-head"><span>Northside IT</span><span class="mm-plus">+</span></div>
+              <div class="mm-group">Channels</div>
+              <div class="mm-row"><span class="mm-hash">#</span>announcements</div>
+              <div class="mm-row active"><span class="mm-hash">#</span>deploys</div>
+              <div class="mm-row unread"><span class="mm-hash">#</span>help-desk<span class="mm-jewel">3</span></div>
+              <div class="mm-row hover"><span class="mm-hash">#</span>lunch<span class="mm-tag">hover</span></div>
+              <div class="mm-row"><span class="mm-hash">#</span>off-topic</div>
+              <div class="mm-group">Direct messages</div>
+              <div class="mm-row"><span class="mm-dot online"></span>Priya Raman</div>
+              <div class="mm-row unread"><span class="mm-dot away"></span>Marcus Bell<span class="mm-jewel">1</span></div>
+              <div class="mm-row"><span class="mm-dot dnd"></span>Lena Ortiz</div>
+              <div class="mm-row"><span class="mm-dot off"></span>Sam Whitfield</div>
+            </div>
+            <div class="mm-center">
+              <div class="mm-chan"><strong>deploys</strong><span>Release coordination for staging and production</span></div>
+              <div class="mm-posts">
+                <div class="mm-post">
+                  <span class="mm-av">PR<span class="mm-dot online"></span></span>
+                  <div><span class="mm-name">Priya Raman</span><span class="mm-time">2:10 PM</span>
+                    <p>Staging is on 4.12. Notes are in <a class="mm-link" href="#mock">wiki/releases/4.12</a>, and this is what I ran:</p>
+                    <pre class="mm-code"><span class="kw">docker</span> compose pull &amp;&amp; <span class="kw">docker</span> compose up -d
+<span class="kw">echo</span> <span class="st">"staging 4.12 live"</span></pre></div>
+                </div>
+                <div class="mm-post">
+                  <span class="mm-av">MB<span class="mm-dot away"></span></span>
+                  <div><span class="mm-name">Marcus Bell</span><span class="mm-time">2:14 PM</span>
+                    <p>Smoke tests pass. Production window opens at 6.</p></div>
+                </div>
+                <div class="mm-sep">New Messages</div>
+                <div class="mm-post mentioned">
+                  <span class="mm-av">LO<span class="mm-dot dnd"></span></span>
+                  <div><span class="mm-name">Lena Ortiz</span><span class="mm-time">2:31 PM</span>
+                    <p><span class="mm-mention">@riley</span> can you approve the firewall change before 5?</p></div>
+                </div>
+                <div class="mm-post">
+                  <span class="mm-av">RK</span>
+                  <div><span class="mm-name">Riley Kim</span><span class="mm-time">2:32 PM</span>
+                    <p>Approved, rolling it now.</p>
+                    <span class="mm-err">Message failed to send. Retry</span></div>
+                </div>
+              </div>
+              <div class="mm-compose"><span>Write to deploys</span><span class="mm-btn">Send</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="note">The preview approximates the Mattermost web app. Dimmed sidebar text, hover and the mention row tint are drawn the way Mattermost derives them from the same keys.</p>
+      <div class="strips">
+        <div class="strip"><span class="cap">Recent</span><div class="thumbs" id="recent"></div></div>
+        <div class="strip"><span class="cap">Kept</span><div class="thumbs" id="kept"></div></div>
+      </div>
+    </div>
+
+    <div class="col">
+      <section class="panel">
+        <div class="panel-head"><h2>Theme JSON</h2></div>
+        <textarea id="json" spellcheck="false" aria-label="Theme JSON"></textarea>
+        <div class="actions">
+          <button class="btn small" id="copy" type="button">Copy theme</button>
+          <button class="btn small" id="load" type="button">Load pasted theme</button>
+          <button class="btn small" id="sample" type="button">Load the teal and orange original</button>
+        </div>
+        <p id="msg" role="status"></p>
+        <p class="note">In Mattermost: Settings, Display, Theme, Custom Theme, then paste into the box under the color pickers.</p>
+      </section>
+      <section class="panel">
+        <div class="panel-head"><h2>Contrast checks</h2><span id="check-sum"></span></div>
+        <ul class="checks" id="checks"></ul>
+        <p class="note">Ratios are WCAG contrast. Text needs 4.5 or more (7 for message text), shapes and badges need 3.</p>
+      </section>
+    </div>
+  </div>
+
+  <section class="panel">
+    <div class="panel-head"><h2>Colors by key</h2><p class="note">Click a swatch to change it. Lock a key to carry its color into the next roll.</p></div>
+    <div class="groups" id="groups"></div>
+  </section>
+</div>
+<!-- app:end -->
+<script src="generator.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
